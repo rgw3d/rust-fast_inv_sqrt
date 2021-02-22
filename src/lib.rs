@@ -1,17 +1,19 @@
 //! Famous "Fast inverse square root" algorithm implementation
 //! along with obligatory original comments.
 
-#![cfg_attr(all(feature = "nightly",test), feature(asm,test,core_intrinsics))]
+#![no_std]
+#![cfg_attr(all(feature = "nightly", test), feature(asm, test, core_intrinsics))]
 
-#[cfg(all(feature = "nightly",test))]
+#[cfg(all(feature = "nightly", test))]
 extern crate test;
 
 #[cfg(test)]
-#[macro_use] extern crate more_asserts;
+#[macro_use]
+extern crate more_asserts;
 
-use std::mem;
-use std::f32;
-use std::f64;
+use core::f32;
+use core::f64;
+use core::mem;
 
 /// A trait that allows calculation of inverse square root into a Float(32).
 pub trait InvSqrt32 {
@@ -31,15 +33,15 @@ pub trait InvSqrt64 {
 #[allow(non_upper_case_globals)]
 impl InvSqrt32 for f32 {
 	fn inv_sqrt32(self: f32) -> f32 {
-		if cfg!(not(feature = "omit-checking")) {
-			if self.signum() != 1.0 {
-				return f32::NAN;
-			} else if self == f32::INFINITY {
-				return 0.0;
-			} else if self < f32::MIN_POSITIVE {
-				return f32::INFINITY;
-			}
-		}
+		//if cfg!(not(feature = "omit-checking")) && cfg!(feature = "std") {
+		//	if self.signum() != 1.0 {
+		//		return f32::NAN;
+		//	} else if self == f32::INFINITY {
+		//		return 0.0;
+		//	} else if self < f32::MIN_POSITIVE {
+		//		return f32::INFINITY;
+		//	}
+		//}
 
 		// Magic number based on Chris Lomont work:
 		// const MAGIC_U32: u32 = 0x5f375a86;
@@ -48,10 +50,10 @@ impl InvSqrt32 for f32 {
 		const threehalfs: f32 = 1.5f32;
 		let x2: f32 = self * 0.5f32;
 		let mut i: u32 = unsafe { mem::transmute(self) }; // evil floating point bit level hacking
-		i = 0x5f375a86 - (i >> 1);                        // what the fuck?
+		i = 0x5f375a86 - (i >> 1); // what the fuck?
 		let y: f32 = unsafe { mem::transmute(i) };
-		let y  = y * ( threehalfs - ( x2 * y * y ) );     // 1st iteration
-//		y  = y * ( threehalfs - ( x2 * y * y ) );       // 2nd iteration, this can be removed
+		let y = y * (threehalfs - (x2 * y * y)); // 1st iteration
+										 //		y  = y * ( threehalfs - ( x2 * y * y ) );       // 2nd iteration, this can be removed
 
 		return y;
 	}
@@ -61,24 +63,24 @@ impl InvSqrt32 for f32 {
 /// This implementation provides somewhat more Rusty look'n'feel.
 impl InvSqrt64 for f64 {
 	fn inv_sqrt64(self: f64) -> f64 {
-		if cfg!(not(feature = "omit-checking")) {
-			if self.signum() != 1.0 {
-				return f64::NAN;
-			} else if self == f64::INFINITY {
-				return 0.0;
-			} else if self < f64::MIN_POSITIVE {
-				return f64::INFINITY;
-			}
-		}
+		//if cfg!(not(feature = "omit-checking")) {
+		//	if self.signum() != 1.0 {
+		//		return f64::NAN;
+		//	} else if self == f64::INFINITY {
+		//		return 0.0;
+		//	} else if self < f64::MIN_POSITIVE {
+		//		return f64::INFINITY;
+		//	}
+		//}
 
 		// Magic number based on Chris Lomont work:
 		const MAGIC_U64: u64 = 0x5fe6ec85e7de30da;
 		const THREEHALFS: f64 = 1.5;
 		let x2 = self * 0.5;
-		let i = MAGIC_U64 - ( unsafe { mem::transmute::<_, u64>(self) } >> 1);
+		let i = MAGIC_U64 - (unsafe { mem::transmute::<_, u64>(self) } >> 1);
 		let y: f64 = unsafe { mem::transmute(i) };
 
-		y * ( THREEHALFS - ( x2 * y * y ) )
+		y * (THREEHALFS - (x2 * y * y))
 	}
 }
 
@@ -216,15 +218,15 @@ impl InvSqrt64 for usize {
 
 #[cfg(test)]
 mod test32 {
-	use std::f32;
 	use super::InvSqrt32;
+	use std::f32;
 
 	#[cfg(feature = "nightly")]
-	use test::{black_box,Bencher};
+	use test::{black_box, Bencher};
 
 	#[cfg(all(feature = "nightly", any(target_arch = "x86", target_arch = "x86_64")))]
 	mod asm_x86 {
-		use test::{black_box,Bencher};
+		use test::{black_box, Bencher};
 
 		#[inline(always)]
 		fn rsqrtss_mem(f: f32) -> f32 {
@@ -288,7 +290,7 @@ mod test32 {
 
 	#[cfg(feature = "nightly")]
 	mod llvm {
-		use test::{black_box,Bencher};
+		use test::{black_box, Bencher};
 
 		#[inline(always)]
 		fn llvm_sqrt32(f: f32) -> f32 {
@@ -433,15 +435,15 @@ mod test32 {
 
 #[cfg(test)]
 mod test64 {
-	use std::f64;
 	use super::InvSqrt64;
+	use std::f64;
 
 	#[cfg(feature = "nightly")]
-	use test::{black_box,Bencher};
+	use test::{black_box, Bencher};
 
 	#[inline(always)]
 	fn ref_inv_sqrt64(f: f64) -> f64 {
-		1.0f64/f.sqrt()
+		1.0f64 / f.sqrt()
 	}
 
 	fn relative_difference(lhs: f64, rhs: f64) -> f64 {
